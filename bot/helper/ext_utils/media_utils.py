@@ -35,7 +35,7 @@ async def convert_video(listener, video_file, ext, retry=False):
         else:
             cmd[7:7] = ["-c:s", "copy"]
     else:
-        cmd = ["ffmpeg", "-i", video_file, "-map", "0", "-c", "copy", output]
+        cmd = ["xtra", "-i", video_file, "-map", "0", "-c", "copy", output]
     if listener.is_cancelled:
         return False
     async with subprocess_lock:
@@ -69,7 +69,7 @@ async def convert_audio(listener, audio_file, ext):
     base_name = ospath.splitext(audio_file)[0]
     output = f"{base_name}.{ext}"
     cmd = [
-        "ffmpeg",
+        "xtra",
         "-i",
         audio_file,
         "-threads",
@@ -239,7 +239,7 @@ async def take_ss(video_file, ss_nb) -> bool:
         for i in range(ss_nb):
             output = f"{dirpath}/SS.{name}_{i:02}.png"
             cmd = [
-                "ffmpeg",
+                "xtra",
                 "-hide_banner",
                 "-loglevel",
                 "error",

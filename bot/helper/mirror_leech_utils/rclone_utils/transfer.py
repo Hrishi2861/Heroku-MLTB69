@@ -419,7 +419,7 @@ class RcloneTransferHelper:
                         f"/{self._listener.name}" if dst_path else self._listener.name
                     )
 
-                cmd = ["rclone", "link", "--config", config_path, destination]
+                cmd = ["xone", "link", "--config", config_path, destination]
                 res, err, code = await cmd_exec(cmd)
 
                 if self._listener.is_cancelled:
@@ -446,7 +446,7 @@ class RcloneTransferHelper:
         else:
             ext = "*.{" + ",".join(self._listener.extension_filter) + "}"
         cmd = [
-            "rclone",
+            "xone",
             method,
             "--fast-list",
             "--config",
