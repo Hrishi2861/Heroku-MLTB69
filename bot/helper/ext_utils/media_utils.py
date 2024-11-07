@@ -17,7 +17,7 @@ async def convert_video(listener, video_file, ext, retry=False):
     output = f"{base_name}.{ext}"
     if retry:
         cmd = [
-            "ffmpeg",
+            "xtra",
             "-i",
             video_file,
             "-c:v",
@@ -282,7 +282,7 @@ async def get_audio_thumbnail(audio_file):
     await makedirs(output_dir, exist_ok=True)
     output = ospath.join(output_dir, f"{time()}.jpg")
     cmd = [
-        "ffmpeg",
+        "xtra",
         "-hide_banner",
         "-loglevel",
         "error",
@@ -314,7 +314,7 @@ async def get_video_thumbnail(video_file, duration):
         duration = 3
     duration = duration // 2
     cmd = [
-        "ffmpeg",
+        "xtra",
         "-hide_banner",
         "-loglevel",
         "error",
@@ -357,7 +357,7 @@ async def get_multiple_frames_thumbnail(video_file, layout, keep_screenshots):
     await makedirs(output_dir, exist_ok=True)
     output = ospath.join(output_dir, f"{time()}.jpg")
     cmd = [
-        "ffmpeg",
+        "xtra",
         "-hide_banner",
         "-loglevel",
         "error",
@@ -422,7 +422,7 @@ async def split_file(
         while i <= parts or start_time < duration - 4:
             out_path = f"{dirpath}/{base_name}.part{i:03}{extension}"
             cmd = [
-                "ffmpeg",
+                "xtra",
                 "-hide_banner",
                 "-loglevel",
                 "error",
@@ -580,7 +580,7 @@ async def create_sample_video(listener, video_file, sample_duration, part_durati
     filter_complex += f"concat=n={len(segments)}:v=1:a=1[vout][aout]"
 
     cmd = [
-        "ffmpeg",
+        "xtra",
         "-i",
         video_file,
         "-filter_complex",
@@ -629,7 +629,7 @@ async def create_sample_video(listener, video_file, sample_duration, part_durati
     for index, (start_time, end_time) in enumerate(segments, start=1):
         output_seg = f"{dir}/mltb_segments/segment{index}.{ext}"
         cmd = [
-            "ffmpeg",
+            "xtra",
             "-i",
             video_file,
             "-ss",
@@ -670,7 +670,7 @@ async def create_sample_video(listener, video_file, sample_duration, part_durati
         await f.write("\n".join(finished_segments))
 
     cmd = [
-        "ffmpeg",
+        "xtra",
         "-f",
         "concat",
         "-safe",

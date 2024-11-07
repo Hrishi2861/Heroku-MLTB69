@@ -144,7 +144,7 @@ async def restart(_, message):
         "pkill",
         "-9",
         "-f",
-        "gunicorn|aria2c|qbittorrent-nox|ffmpeg|rclone|java|sabnzbdplus",
+        "gunicorn|xria|xnox|xtra|xone|java|sabnzbdplus",
     )
     proc2 = await create_subprocess_exec("python3", "update.py")
     await gather(proc1.wait(), proc2.wait())
