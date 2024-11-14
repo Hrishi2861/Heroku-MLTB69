@@ -68,6 +68,7 @@ aria2_options = {}
 qbit_options = {}
 nzb_options = {}
 queued_dl = {}
+shorteneres_list = {}
 queued_up = {}
 non_queued_dl = set()
 non_queued_up = set()
@@ -495,6 +496,21 @@ if ospath.exists("list_drives.txt"):
                 index_urls.append(temp[2])
             else:
                 index_urls.append("")
+
+if ospath.exists("shorteners.txt"):
+    with open(
+        "shorteners.txt",
+        "r+"
+    ) as f:
+        lines = f.readlines()
+        for line in lines:
+            temp = line.strip().split()
+            if len(temp) == 2:
+                shorteneres_list.append({
+                    "domain": temp[0],
+                    "api_key": temp[1]
+                })
+
 
 PORT = environ.get("PORT")
 Popen(

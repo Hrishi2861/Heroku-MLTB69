@@ -11,11 +11,13 @@ from psutil import (
     net_io_counters,
     boot_time,
 )
+import asyncio
 from pyrogram.filters import command
 from pyrogram.handlers import MessageHandler
 from signal import signal, SIGINT
 from sys import executable
 from time import time
+from uuid import uuid4
 
 from bot import (
     bot,
@@ -25,7 +27,12 @@ from bot import (
     config_dict,
     scheduler,
     sabnzbd_client,
+    user_data,
+    bot_name,
+    DATABASE_URL
 )
+from .helper.ext_utils.db_handler import DbManager
+from .helper.ext_utils.shorteners import short_url
 from .helper.ext_utils.telegraph_helper import telegraph
 from .helper.ext_utils.bot_utils import (
     cmd_exec,
@@ -96,26 +103,163 @@ async def stats(_, message):
     await send_message(message, stats)
 
 
-@new_task
-async def start(client, message):
-    buttons = ButtonMaker()
-    buttons.url_button(
-        "Repo", "https://www.github.com/anasty17/mirror-leech-telegram-bot"
+async def checking_access(user_id, button=None):
+    if not config_dict["TOKEN_TIMEOUT"]:
+        return None, button
+    user_data.setdefault(user_id, {})
+    data = user_data[user_id]
+    if DATABASE_URL:
+        data["time"] = await DbManager().get_token_expire_time(user_id)
+    expire = data.get("time")
+    isExpired = (
+        expire is None
+        or expire is not None
+        and (time() - expire) > config_dict["TOKEN_TIMEOUT"]
     )
-    buttons.url_button("Code Owner", "https://t.me/anas_tayyar")
-    reply_markup = buttons.build_menu(2)
-    if await CustomFilters.authorized(client, message):
-        start_string = f"""
-This bot can mirror all your links|files|torrents to Google Drive or any rclone cloud or to telegram.
-Type /{BotCommands.HelpCommand} to get a list of available commands
-"""
-        await send_message(message, start_string, reply_markup)
-    else:
-        await send_message(
-            message,
-            "You Are not authorized user! Deploy your own mirror-leech bot",
-            reply_markup,
+    if isExpired:
+        token = (
+            data["token"]
+            if expire is None
+            and "token" in data
+            else str(uuid4())
         )
+        inittime = time()
+        if expire is not None:
+            del data["time"]
+        data["token"] = token
+        data["inittime"] = inittime
+        if DATABASE_URL:
+            await DbManager().update_user_token(
+                user_id,
+                token,
+                inittime
+            )
+        user_data[user_id].update(data)
+        if button is None:
+            button = ButtonMaker()
+        button.url_button(
+            "Get New Token",
+            short_url(f"https://redirect.jet-mirror.in/{bot_name}/{token}")
+        )
+        tmsg = (
+            "Your <b>Token</b> is expired. Get a new one."
+            f"\n<b>Token Validity</b>: {get_readable_time(config_dict["TOKEN_TIMEOUT"])}\n\n"
+            "<b>Your Limites:</b>\n"
+            f"{config_dict["USER_MAX_TASKS"]} parallal tasks.\n"
+        )
+        return (
+            tmsg,
+            button
+        )
+    return (
+        None,
+        button
+    )
+
+
+async def start(client, message):
+    sticker_message = await message.reply_sticker("CAACAgIAAxkBAAEarGtmq8a_Hy6_Pk8IzUHRO8i1dvwDyAACFh4AAuzxOUkNYHq7o3u0ODUE")
+    await asyncio.sleep(2)
+    await sticker_message.delete()
+    if (
+        len(message.command) > 1
+        and len(message.command[1]) == 36
+    ):
+        userid = message.from_user.id
+        input_token = message.command[1]
+        if DATABASE_URL:
+            stored_token = await DbManager().get_user_token(userid)
+            if stored_token is None:
+                return await send_message(
+                    message,
+                    "This token is not associated with your account.\n\nPlease generate your own token."
+                )
+            if input_token != stored_token:
+                return await send_message(
+                    message,
+                    "Invalid token.\n\nPlease generate a new one."
+                )
+            inittime = await DbManager().get_token_init_time(userid)
+        if userid not in user_data:
+            return await send_message(
+                message,
+                "This token is not yours!\n\nKindly generate your own."
+            )
+        data = user_data[userid]
+        if (
+            "token" not in data
+            or data["token"] != input_token
+        ):
+            return await send_message(
+                message,
+                "Token already used!\n\nKindly generate a new one."
+            )
+        token = str(uuid4())
+        ttime = time()
+        data["token"] = token
+        data["time"] = ttime
+        user_data[userid].update(data)
+        if DATABASE_URL:
+            await DbManager().update_user_tdata(
+                userid,
+                token,
+                ttime
+            )
+        msg = (
+            "<b>Your token refreshed successfully!</b>\n"
+            f"➜ Validity: {get_readable_time(int(config_dict["TOKEN_TIMEOUT"]))}\n\n"
+            "<b><i>Your Limites:</i></b>\n"
+            f"➜ {config_dict["USER_MAX_TASKS"]} parallal tasks.\n"
+        )
+
+        return await send_message(
+            message,
+            msg
+        )
+    elif (
+        config_dict["DM_MODE"]
+        and message.chat.type != message.chat.type.SUPERGROUP
+    ):
+        start_string = 'Bot Started.\n' \
+                       'Now I will send all of your stuffs here.\n' \
+                       'Use me at: @JetMirror \n' \
+                       'Repo: @Z_Mirror'
+    elif (
+        not config_dict["DM_MODE"]
+        and message.chat.type != message.chat.type.SUPERGROUP
+        and not await CustomFilters.authorized(client, message)
+    ):
+        start_string = 'Sorry, you cannot use me here!\n' \
+                       'Join: @JetMirror to use me.\n' \
+                       'Thank You.\n' \
+                       'Repo: @Z_Mirror'
+    elif (
+        not config_dict["DM_MODE"]
+        and message.chat.type != message.chat.type.SUPERGROUP
+        and await CustomFilters.authorized(client, message)
+    ):
+        start_string = 'Sorry, you cannot use me here!\n' \
+                       'Join: @JetMirror to use me.\n' \
+                       'Thank You.\n' \
+                       'Repo: @Z_Mirror'
+    else:
+        tag = message.from_user.mention
+        start_string = "Start me in DM, not in the group.\n" \
+                       f"cc: {tag}"
+#     await send_message(
+#         message,
+#         start_string
+# )
+    buttons = ButtonMaker()
+    buttons.url_button("Join Channel 🚀", "https://t.me/JetMirror")
+    buttons.url_button("Owner ☀️", "https://t.me/hrishikesh2861")
+    reply_markup = buttons.build_menu(2)
+    await client.send_photo(
+        chat_id=message.chat.id,
+        photo="/usr/src/app/Jet.jpg",
+        caption=start_string,
+        reply_markup=reply_markup
+    )
 
 
 @new_task
