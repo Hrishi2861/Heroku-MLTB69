@@ -1,12 +1,41 @@
 from bot import LOGGER, subprocess_lock
 from ...ext_utils.status_utils import get_readable_file_size, MirrorStatus
-
+from subprocess import run as frun
 
 class SplitStatus:
     def __init__(self, listener, gid):
         self.listener = listener
         self._gid = gid
         self._size = self.listener.size
+        self.engine = self._eng_ver()
+
+    def _eng_ver(self):
+        if self.listener.as_doc:
+            pkg = "Split v"
+            _engine = frun(
+                [
+                    "split",
+                    "--version"
+                ],
+                capture_output=True,
+                text=True
+            )
+            _engine = _engine.stdout.split("\n")[0].split(" ")[3]
+            result = f"{pkg}{_engine}"
+            return result
+        else:
+            pkg = "FFmpeg v"
+            _engine = frun(
+                [
+                    "ffmpeg",
+                    "-version"
+                ],
+                capture_output=True,
+                text=True
+            )
+            _engine = _engine.stdout.split("\n")[0].split(" ")[2].split("-")[0]
+            result = f"{pkg}{_engine}"
+            return result
 
     def gid(self):
         return self._gid

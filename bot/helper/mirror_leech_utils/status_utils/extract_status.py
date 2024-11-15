@@ -7,7 +7,7 @@ from ...ext_utils.status_utils import (
     MirrorStatus,
     get_readable_time,
 )
-
+from subprocess import run as prun
 
 class ExtractStatus:
     def __init__(self, listener, gid):
@@ -16,6 +16,18 @@ class ExtractStatus:
         self._gid = gid
         self._start_time = time()
         self._proccessed_bytes = 0
+        self.engine = f"p7zip v{self._eng_ver()}"
+
+    def _eng_ver(self):
+        _engine = prun(
+            [
+                "7z",
+                "-version"
+            ],
+            capture_output=True,
+            text=True
+        )
+        return _engine.stdout.split("\n")[1].split(" ")[1]
 
     def gid(self):
         return self._gid

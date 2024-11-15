@@ -31,6 +31,10 @@ class SabnzbdStatus:
         self.cstatus = status
         self._gid = gid
         self._info = None
+        self.engine = f"Sabnzbd v{self._eng_ver()}"
+
+    def _eng_ver(self):
+        return sabnzbd_client.get_version()["version"]
 
     async def update(self):
         self._info = await get_download(self._gid, self._info)

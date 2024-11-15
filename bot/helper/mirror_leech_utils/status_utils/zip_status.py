@@ -1,5 +1,5 @@
 from time import time
-
+from subprocess import run as zrun
 from bot import LOGGER, subprocess_lock
 from ...ext_utils.files_utils import get_path_size
 from ...ext_utils.status_utils import (
@@ -16,6 +16,18 @@ class ZipStatus:
         self._gid = gid
         self._start_time = time()
         self._proccessed_bytes = 0
+        self.engine = f"p7zip v{self._eng_ver()}"
+
+    def _eng_ver(self):
+        _engine = zrun(
+            [
+                "7z",
+                "-version"
+            ],
+            capture_output=True,
+            text=True
+        )
+        return _engine.stdout.split("\n")[1].split(" ")[1]
 
     def gid(self):
         return self._gid
