@@ -15,9 +15,10 @@ from bot import (
 from ..ext_utils.bot_utils import new_task, sync_to_async
 from ..ext_utils.files_utils import clean_unwanted
 from ..ext_utils.status_utils import get_readable_time, get_task_by_gid
-from ..ext_utils.task_manager import stop_duplicate_check
+from ..ext_utils.task_manager import stop_duplicate_check, limit_checker
 from ..mirror_leech_utils.status_utils.qbit_status import QbittorrentStatus
 from ..telegram_helper.message_utils import update_status_message
+from ..ext_utils.status_utils import get_readable_file_size
 
 
 async def _remove_torrent(hash_, tag):
@@ -62,6 +63,22 @@ async def _stop_duplicate(tor):
             if msg:
                 _on_download_error(msg, tor, button)
 
+@new_task
+async def _size_checked(tor):
+    if task := await get_task_by_gid(tor.hash[:12]):
+        task.listener.size = tor.size
+        limit_exceeded = await limit_checker(
+            task.listener,
+            is_torrent=True
+        )
+        if limit_exceeded:
+            LOGGER.info(
+                f"qBit Limit Exceeded: {task.listener.name} | {get_readable_file_size(task.listener.size)}"
+            )
+            await _on_download_error(
+                limit_exceeded,
+                tor
+            )
 
 @new_task
 async def _on_download_complete(tor):

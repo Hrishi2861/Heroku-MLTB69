@@ -1,13 +1,15 @@
 from asyncio import sleep
-from pyrogram.errors import FloodWait, FloodPremiumWait
+from pyrogram.errors import FloodWait, FloodPremiumWait, RPCError, PeerIdInvalid, UserNotParticipant
 from re import match as re_match
 from time import time
-
-from bot import config_dict, LOGGER, status_dict, task_dict_lock, intervals, bot, user
+from pyrogram.enums import ChatAction
+from .button_build import ButtonMaker
+from bot import config_dict, LOGGER, status_dict, task_dict_lock, intervals, bot, user, bot_name, cached_dict
 from ..ext_utils.bot_utils import SetInterval
 from ..ext_utils.exceptions import TgLinkException
 from ..ext_utils.status_utils import get_readable_message
-
+from pyrogram.types import ChatPermissions
+from datetime import datetime,timedelta,timezone
 
 async def send_message(message, text, buttons=None, block=True):
     try:
@@ -267,3 +269,236 @@ async def send_status_message(msg, user_id=0):
         intervals["status"][sid] = SetInterval(
             config_dict["STATUS_UPDATE_INTERVAL"], update_status_message, sid
         )
+
+async def user_info(client, user_id):
+    return await client.get_users(user_id)
+
+async def is_bot_can_dm(message, dmMode, button=None):
+    if not dmMode:
+        return None, button
+    await user_info(
+        message._client,
+        message.from_user.id
+    )
+    try:
+        await message._client.send_chat_action(
+            message.from_user.id,
+            ChatAction.TYPING
+        )
+    except Exception:
+        if button is None:
+            button = ButtonMaker()
+        _msg = "You need to <b>Start</b> me in <b>DM</b>."
+        button.url_button(
+            "ꜱᴛᴀʀᴛ\nᴍᴇ",
+            f"https://t.me/{bot_name}?start=start",
+            "header"
+        )
+        return (
+            _msg,
+            button
+        )
+    return (
+        "BotStarted",
+        button
+    )
+
+async def delete_links(message):
+    if config_dict["DELETE_LINKS"]:
+        if reply_to := message.reply_to_message:
+            await delete_message(reply_to)
+        await delete_message(message)
+
+async def send_log_message(message, link, tag):
+    if not (log_chat := config_dict["LOG_CHAT_ID"]):
+        return
+    try:
+        isSuperGroup = message.chat.type in [
+            message.chat.type.SUPERGROUP,
+            message.chat.type.CHANNEL
+        ]
+        if reply_to := message.reply_to_message:
+            if not reply_to.text:
+                caption = ""
+                if isSuperGroup and not config_dict["DELETE_LINKS"]:
+                    caption+=f"<b><a href='{message.link}'>Source</a></b> | "
+                caption+=f"<b>Added by</b>: {tag}\n<b>User ID</b>: <code>{message.from_user.id}</code>"
+                return await reply_to.copy(
+                    log_chat,
+                    caption=caption
+                )
+        msg = ""
+        if isSuperGroup and not config_dict["DELETE_LINKS"]:
+            msg+=f"\n\n<b><a href='{message.link}'>Source Link</a></b>: "
+        msg += f"<code>{link}</code>\n\n<b>Added by</b>: {tag}\n"
+        msg += f"<b>User ID</b>: <code>{message.from_user.id}</code>"
+        return await message._client.send_message(
+            log_chat,
+            msg,
+            disable_web_page_preview=True
+        )
+    except FloodWait as r:
+        LOGGER.warning(str(r))
+        await sleep(r.value * 1.2) # type: ignore
+        return await send_log_message(
+            message,
+            link,
+            tag
+        )
+    except RPCError as e:
+        LOGGER.error(f"{e.NAME}: {e.MESSAGE}")
+    except Exception as e:
+        LOGGER.error(str(e))
+
+
+async def is_admin(message, user_id=None):
+    if message.chat.type == message.chat.type.PRIVATE:
+        return
+    if user_id:
+        member = await message.chat.get_member(user_id)
+    else:
+        member = await message.chat.get_member(message.from_user.id)
+    return member.status in [
+        member.status.ADMINISTRATOR,
+        member.status.OWNER
+    ]
+
+
+async def force_subscribe(message, ids, button=None):
+    join_button = {}
+    _msg = ""
+    for channel_id in ids.split():
+        if channel_id.startswith("-100"):
+            channel_id = int(channel_id)
+        elif channel_id.startswith("@"):
+            channel_id = channel_id.replace("@", "")
+        else:
+            continue
+        try:
+            chat = await message._client.get_chat(channel_id)
+        except (PeerIdInvalid, RPCError) as e:
+            LOGGER.error(f"{e.NAME}: {e.MESSAGE} for {channel_id}. Mostly I'm not added in the channel as admin.")
+            continue
+        try:
+            await chat.get_member(message.from_user.id)
+        except UserNotParticipant:
+            if username := chat.username:
+                invite_link = f"https://t.me/{username}"
+            else:
+                invite_link = chat.invite_link
+            join_button[chat.title] = invite_link
+        except RPCError as e:
+            LOGGER.error(f"{e.NAME}: {e.MESSAGE} for {channel_id}")
+        except Exception as e:
+            LOGGER.error(f"{e} for {channel_id}")
+    if join_button:
+        if button is None:
+            button = ButtonMaker()
+        _msg = f"You need to join our channel to use me."
+        for (
+            key,
+            value
+        ) in join_button.items():
+            button.url_button(
+                f"{key}",
+                value,
+                "footer"
+            )
+    return (
+        _msg,
+        button
+    )
+
+async def anno_checker(message, pmsg=None):
+    msg_id = message.id
+    buttons = ButtonMaker()
+    buttons.data_button(
+        "Verify",
+        f"verify admin {msg_id}"
+    )
+    buttons.data_button(
+        "Cancel",
+        f"verify no {msg_id}"
+    )
+    user = None
+    cached_dict[msg_id] = user
+    if pmsg is not None:
+        await edit_message(
+            pmsg,
+            f"{message.sender_chat.type.name} Anon Verification",
+            buttons.build_menu(2)
+        )
+    else:
+        await send_message(
+            message,
+            f"{message.sender_chat.type.name} Anon Verification",
+            buttons.build_menu(2)
+        )
+    start_time = time()
+    while time() - start_time <= 7:
+        await sleep(0.5)
+        if cached_dict[msg_id]:
+            break
+    user = cached_dict[msg_id]
+    del cached_dict[msg_id]
+    return user
+
+
+async def mute_member(message, userid, until=60):
+    try:
+        await message.chat.restrict_member(
+            userid,
+            ChatPermissions(),
+            datetime.now(timezone.utc) + timedelta(seconds=until)
+        )
+    except RPCError as e:
+        LOGGER.error(f"{e.NAME}: {e.MESSAGE}")
+    except Exception as e:
+        LOGGER.error(f"Exception while muting member {e}")
+
+
+warned_users = {}
+async def request_limiter(message=None, query=None):
+    if not (LIMITS := config_dict["REQUEST_LIMITS"]):
+        return
+    if not message:
+        if not query:
+            return
+        message = query.message
+    if message.chat.type == message.chat.type.PRIVATE:
+        return
+    userid = (
+        query.from_user.id
+        if query
+        else message.from_user.id
+    )
+    current_time = time()
+    if userid in warned_users:
+        time_between = current_time - warned_users[userid]["time"]
+        if time_between > 69:
+            warned_users[userid]["warn"] = 0
+        elif time_between < 3:
+            warned_users[userid]["warn"] += 1
+    else:
+        warned_users[userid] = {"warn": 0}
+    warned_users[userid]["time"] = current_time
+    if warned_users[userid]["warn"] >= LIMITS+1:
+        return True
+    if warned_users[userid]["warn"] >= LIMITS:
+        await mute_member(message, userid)
+        return True
+    if warned_users[userid]["warn"] >= LIMITS-1:
+        if query:
+            await query.answer(
+                "Oops, Spam detected! I will mute you for 69 seconds.",
+                show_alert=True
+            )
+        else:
+            m69 = await send_message(
+                message,
+                "Oops, Spam detected! I will mute you for 69 seconds."
+            )
+            await auto_delete_message(
+                message,
+                m69
+            )

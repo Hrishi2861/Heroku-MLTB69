@@ -19,7 +19,7 @@ from ..helper.ext_utils.links_utils import (
     is_rclone_path,
     is_gdrive_id,
 )
-from ..helper.ext_utils.task_manager import stop_duplicate_check
+from ..helper.ext_utils.task_manager import stop_duplicate_check, limit_checker
 from ..helper.listeners.task_listener import TaskListener
 from ..helper.mirror_leech_utils.download_utils.direct_link_generator import (
     direct_link_generator,
@@ -35,6 +35,7 @@ from ..helper.telegram_helper.message_utils import (
     send_message,
     delete_message,
     send_status_message,
+    auto_delete_message
 )
 
 
@@ -118,6 +119,10 @@ class Clone(TaskListener):
             )
             return
         LOGGER.info(self.link)
+        if await self.permission_check() != True:
+            return
+        await delete_message(self.pmsg)
+        
         try:
             await self.before_start()
         except Exception as e:
@@ -145,6 +150,17 @@ class Clone(TaskListener):
             msg, button = await stop_duplicate_check(self)
             if msg:
                 await send_message(self.message, msg, button)
+                return
+            if limit_exceeded := await limit_checker(self):
+                LOGGER.info(f"Clone Limit Exceeded: Name: {self.name} | Size: {self.size}")
+                smsg = await send_message(
+                    self.message,
+                    limit_exceeded
+                )
+                await auto_delete_message(
+                    self.message,
+                    smsg
+                )
                 return
             await self.on_download_start()
             LOGGER.info(f"Clone Started: Name: {self.name} - Source: {self.link}")

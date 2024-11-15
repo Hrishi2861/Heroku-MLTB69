@@ -5,6 +5,10 @@ from os import walk, path as ospath
 from secrets import token_urlsafe
 from aioshutil import move, copy2
 from pyrogram.enums import ChatAction
+from .j_utils import (
+    none_admin_utils,
+    stop_duplicate_tasks
+)
 from re import sub, I
 
 from bot import (
@@ -67,6 +71,13 @@ from .telegram_helper.message_utils import (
     send_message,
     send_status_message,
     get_tg_link_message,
+    auto_delete_message,
+    is_bot_can_dm,
+    edit_message,
+    is_admin,
+    delete_links,
+    delete_message,
+    request_limiter
 )
 
 
@@ -191,6 +202,98 @@ class TaskConfig:
                 self.private_link = True
             if not await aiopath.exists(token_path):
                 raise ValueError(f"NO TOKEN! {token_path} not Exists!")
+
+    async def permission_check(self):
+        error_msg = []
+        error_button = None
+
+        if not await is_admin(self.message): # type: ignore
+            if await request_limiter(self.message): # type: ignore
+                await delete_links(self.message) # type: ignore
+                return
+
+            self.raw_url = await stop_duplicate_tasks(
+                self.message, # type: ignore
+                self.link, # type: ignore
+                self.file_ # type: ignore
+            )
+
+            if self.raw_url == "duplicate_tasks":
+                await delete_message(self.pmsg) # type: ignore
+                await delete_links(self.message) # type: ignore
+                return
+
+            (
+                none_admin_msg,
+                error_button
+            ) = await none_admin_utils(
+                self.message, # type: ignore
+                self.is_leech
+            )
+
+            if none_admin_msg:
+                error_msg.extend(none_admin_msg)
+
+        if (
+            (dmMode := config_dict["DM_MODE"])
+            and self.message.chat.type == self.message.chat.type.SUPERGROUP # type: ignore
+        ):
+            (
+                self.dm_message,
+                error_button
+            ) = await is_bot_can_dm(
+                self.message, # type: ignore
+                dmMode,
+                error_button
+            )
+
+            if (
+                self.dm_message is not None
+                and self.dm_message != "BotStarted"
+            ):
+                error_msg.append(self.dm_message)
+
+        else:
+            self.dm_message = None
+
+        if error_msg:
+            final_msg = f"Hey, <b>{self.tag}</b>,\n"
+
+            for (
+                _i,
+                _msg
+            ) in enumerate(
+                error_msg,
+                1
+            ):
+                final_msg += f"\n<b>{_i}</b>: {_msg}\n"
+
+            final_msg += f"\n<b>Thank You</b>"
+
+            if error_button is not None:
+                error_button = error_button.build_menu(2)
+
+            await delete_links(self.message) # type: ignore
+            try:
+                mmsg = await edit_message(
+                    self.pmsg, # type: ignore
+                    final_msg,
+                    error_button
+                )
+            except:
+                mmsg = await send_message(
+                    self.message, # type: ignore
+                    final_msg,
+                    error_button
+                )
+
+            await auto_delete_message(
+                self.pmsg, # type: ignore
+                mmsg
+            )
+            return
+        return True
+
 
     async def before_start(self):
         self.name_sub = (

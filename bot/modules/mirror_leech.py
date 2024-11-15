@@ -42,7 +42,7 @@ from ..helper.mirror_leech_utils.download_utils.telegram_download import (
 )
 from ..helper.telegram_helper.bot_commands import BotCommands
 from ..helper.telegram_helper.filters import CustomFilters
-from ..helper.telegram_helper.message_utils import send_message, get_tg_link_message
+from ..helper.telegram_helper.message_utils import send_message, get_tg_link_message, delete_message
 
 
 class Mirror(TaskListener):
@@ -288,6 +288,10 @@ class Mirror(TaskListener):
 
         if len(self.link) > 0:
             LOGGER.info(self.link)
+
+        if await self.permission_check() != True:
+            return
+        await delete_message(self.pmsg)
 
         try:
             await self.before_start()

@@ -6,18 +6,20 @@ from bot import aria2, task_dict_lock, task_dict, LOGGER, config_dict, intervals
 from ..ext_utils.bot_utils import loop_thread, bt_selection_buttons, sync_to_async
 from ..ext_utils.files_utils import clean_unwanted
 from ..ext_utils.status_utils import get_task_by_gid
-from ..ext_utils.task_manager import stop_duplicate_check
+from ..ext_utils.task_manager import stop_duplicate_check, limit_checker
 from ..mirror_leech_utils.status_utils.aria2_status import Aria2Status
 from ..telegram_helper.message_utils import (
     send_message,
     delete_message,
     update_status_message,
 )
-
-
+from ..ext_utils.status_utils import get_readable_file_size
 @loop_thread
 async def _on_download_started(api, gid):
-    download = await sync_to_async(api.get_download, gid)
+    download = await sync_to_async(
+        api.get_download,
+        gid
+    )
     if download.options.follow_torrent == "false":
         return
     if download.is_metadata:
@@ -27,7 +29,10 @@ async def _on_download_started(api, gid):
             task.listener.is_torrent = True
             if task.listener.select:
                 metamsg = "Downloading Metadata, wait then you can select files. Use torrent file to avoid this wait."
-                meta = await send_message(task.listener.message, metamsg)
+                meta = await send_message(
+                    task.listener.message,
+                    metamsg
+                )
                 while True:
                     await sleep(0.5)
                     if download.is_removed or download.followed_by_ids:
@@ -36,20 +41,62 @@ async def _on_download_started(api, gid):
                     await sync_to_async(download.update)
         return
     else:
-        LOGGER.info(f"onDownloadStarted: {download.name} - Gid: {gid}")
+        LOGGER.info(f"onAria2DownloadStarted: {download.name} - Gid: {gid}")
         await sleep(1)
 
     await sleep(2)
     if task := await get_task_by_gid(gid):
-        download = await sync_to_async(api.get_download, gid)
+        download = await sync_to_async(
+            api.get_download,
+            gid
+        )
         await sync_to_async(download.update)
         task.listener.name = download.name
-        msg, button = await stop_duplicate_check(task.listener)
+        task.listener.is_torrent = download.is_torrent
+        (
+            msg,
+            button
+        ) = await stop_duplicate_check(task.listener)
         if msg:
-            await task.listener.on_download_error(msg, button)
-            await sync_to_async(api.remove, [download], force=True, files=True)
+            await task.listener.on_download_error(
+                msg,
+                button
+            )
+            await sync_to_async(
+                api.remove,
+                [download],
+                force=True,
+                files=True
+            )
             return
-
+        if download.total_length == 0:
+            start_time = time()
+            while time() - start_time <= 15:
+                await sleep(5)
+                download = await sync_to_async(
+                    api.get_download,
+                    gid
+                )
+                await sync_to_async(download.update)
+                if download.followed_by_ids:
+                    download = await sync_to_async(
+                        api.get_download,
+                        download.followed_by_ids[0]
+                    )
+                    await sync_to_async(download.update)
+                if download.total_length > 0:
+                    break
+        task.listener.size = download.total_length
+        if not task.listener.select:
+            if limit_exceeded := await limit_checker(task.listener):
+                LOGGER.info(f"Aria2 Limit Exceeded: {task.listener.name} | {get_readable_file_size(task.listener.size)}")
+                await task.listener.on_download_error(limit_exceeded)
+                await sync_to_async(
+                    api.remove,
+                    [download],
+                    force=True,
+                    files=True
+                )
 
 @loop_thread
 async def _on_download_complete(api, gid):

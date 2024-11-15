@@ -69,60 +69,6 @@ from .modules import (
     force_start,
 )
 
-async def checking_access(user_id, button=None):
-    if not config_dict["TOKEN_TIMEOUT"]:
-        return None, button
-    user_data.setdefault(user_id, {})
-    data = user_data[user_id]
-    if DATABASE_URL:
-        data["time"] = await DbManager().get_token_expire_time(user_id)
-    expire = data.get("time")
-    isExpired = (
-        expire is None
-        or expire is not None
-        and (time() - expire) > config_dict["TOKEN_TIMEOUT"]
-    )
-    if isExpired:
-        token = (
-            data["token"]
-            if expire is None
-            and "token" in data
-            else str(uuid4())
-        )
-        inittime = time()
-        if expire is not None:
-            del data["time"]
-        data["token"] = token
-        data["inittime"] = inittime
-        if DATABASE_URL:
-            await DbManager().update_user_token(
-                user_id,
-                token,
-                inittime
-            )
-        user_data[user_id].update(data)
-        if button is None:
-            button = ButtonMaker()
-        button.url_button(
-            "Get New Token",
-            short_url(f"https://redirect.jet-mirror.in/{bot_name}/{token}")
-        )
-        tmsg = (
-            "Your <b>Token</b> is expired. Get a new one."
-            f"\n<b>Token Validity</b>: {get_readable_time(config_dict["TOKEN_TIMEOUT"])}\n\n"
-            "<b>Your Limites:</b>\n"
-            f"{config_dict["USER_MAX_TASKS"]} parallal tasks.\n"
-        )
-        return (
-            tmsg,
-            button
-        )
-    return (
-        None,
-        button
-    )
-
-
 async def start(client, message):
     sticker_message = await message.reply_sticker("CAACAgIAAxkBAAEarGtmq8a_Hy6_Pk8IzUHRO8i1dvwDyAACFh4AAuzxOUkNYHq7o3u0ODUE")
     await asyncio.sleep(2)

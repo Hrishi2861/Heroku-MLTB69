@@ -14,6 +14,7 @@ from bot import (
     qbittorrent_client,
     sabnzbd_client,
 )
+from bot.helper.ext_utils.task_manager import limit_checker
 from ..helper.ext_utils.bot_utils import (
     bt_selection_buttons,
     sync_to_async,
@@ -26,7 +27,10 @@ from ..helper.telegram_helper.message_utils import (
     send_message,
     send_status_message,
     delete_message,
+    auto_delete_message,
+    delete_links
 )
+from ..helper.ext_utils.status_utils import get_readable_file_size
 
 
 @new_task
@@ -150,6 +154,25 @@ async def get_confirm(_, query):
                     )
             else:
                 res = await sync_to_async(aria2.client.get_files, id_)
+                task.listener.size = sum(
+                    int(file['length'])
+                    for file in res
+                    if file['selected'] == 'true'
+                )
+                LOGGER.info(f"Total size after selection: {get_readable_file_size(task.listener.size)}")
+                if limit_exceeded := await limit_checker(task.listener):
+                    LOGGER.info(f"Aria2 Limit Exceeded: {task.listener.name} | {get_readable_file_size(task.listener.size)}")
+                    amsg = await task.listener.on_download_error(limit_exceeded)
+                    await sync_to_async(
+                        aria2.client.remove,
+                        id_
+                    )
+                    await delete_links(task.listener.message)
+                    await auto_delete_message(
+                        task.listener.message,
+                        amsg
+                    )
+                    return
                 for f in res:
                     if f["selected"] == "false" and await aiopath.exists(f["path"]):
                         try:

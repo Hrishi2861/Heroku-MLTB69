@@ -10,10 +10,11 @@ from bot import (
     LOGGER,
 )
 from .bot_utils import sync_to_async, get_telegraph_list
-from .files_utils import get_base_name
+from .files_utils import get_base_name, check_storage_threshold
 from .links_utils import is_gdrive_id
 from ..mirror_leech_utils.gdrive_utils.search import GoogleDriveSearch
-from bot.helper.ext_utils.status_utils import get_specific_tasks
+from bot.helper.ext_utils.status_utils import get_specific_tasks, get_readable_file_size
+from ..telegram_helper.message_utils import is_admin
 
 
 async def stop_duplicate_check(listener):
@@ -60,6 +61,136 @@ async def check_user_tasks(user_id, maxtask):
         user_id
     )
     return len(all_tasks) >= maxtask
+
+async def limit_checker(
+        listener,
+        is_torrent=False,
+        is_drive_link=False,
+        is_rclone=False,
+        is_jd=False,
+        is_nzb=False,
+    ):
+    try:
+        if await is_admin(listener.message):
+            return
+    except Exception as e:
+        LOGGER.error(f"Error while checking if the user is Admin: {e}")
+
+    GB = 1024 ** 3
+    limit_exceeded = ""
+
+    def check_limit(limit, size, limit_type):
+        limit_bytes = limit * GB
+        if size > limit_bytes:
+            return f"{limit_type} limit is {get_readable_file_size(limit_bytes)}"
+        return ""
+
+    limit_configs = [
+        (
+            listener.is_ytdlp,
+            "YTDLP_LIMIT",
+            "Yt-Dlp"
+        ),
+        (
+            listener.is_playlist,
+            "PLAYLIST_LIMIT",
+            "Yt-Dlp Playlist",
+            "playlist_count"
+        ),
+        (
+            listener.is_clone,
+            "CLONE_LIMIT",
+            "Clone"
+        ),
+        (
+            is_rclone,
+            "RCLONE_LIMIT",
+            "Rclone"
+        ),
+        (
+            is_jd,
+            "JD_LIMIT",
+            "Jdownloader"
+        ),
+        (
+            is_drive_link,
+            "GDRIVE_LIMIT",
+            "Google drive"
+        ),
+        (
+            is_nzb,
+            "NZB_LIMIT",
+            "NZB"
+        ),
+        (
+            is_torrent or listener.is_torrent,
+            "TORRENT_LIMIT",
+            "Torrent"
+        ),
+        (
+            True,
+            "DIRECT_LIMIT",
+            "Direct"
+        )
+    ]
+
+    for (
+        condition,
+        limit_key,
+        limit_type,
+        *optional
+    ) in limit_configs:
+        if condition:
+            limit = config_dict.get(limit_key)
+            if limit:
+                size = getattr(
+                    listener,
+                    optional[0],
+                    listener.size
+                ) if optional else listener.size
+                limit_exceeded = check_limit(
+                    limit,
+                    size,
+                    limit_type
+                )
+                if limit_exceeded:
+                    break
+
+    if (
+        not limit_exceeded
+        and listener.is_leech
+    ):
+        limit = config_dict.get("LEECH_LIMIT")
+        if limit:
+            limit_exceeded = check_limit(
+                limit,
+                listener.size,
+                "Leech"
+            )
+
+    if (
+        not limit_exceeded
+        and config_dict.get("STORAGE_THRESHOLD")
+        and not listener.is_clone
+    ):
+        arch = any([
+            listener.compress,
+            listener.extract
+        ])
+        limit = config_dict["STORAGE_THRESHOLD"] * GB
+        acpt = await sync_to_async(
+            check_storage_threshold,
+            listener.size,
+            limit,
+            arch
+        )
+        if not acpt:
+            limit_exceeded = f"Don't have enough free space for your task.\nYou must leave {get_readable_file_size(limit)} free storage"
+
+    if limit_exceeded:
+        if listener.is_playlist:
+            return limit_exceeded
+        return f"{limit_exceeded}.\n⚠ Your task size is {get_readable_file_size(listener.size)}"
 
 async def check_running_tasks(listener, state="dl"):
     all_limit = config_dict["QUEUE_ALL"]
