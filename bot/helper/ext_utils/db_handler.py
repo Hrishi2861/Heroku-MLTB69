@@ -13,6 +13,7 @@ from bot import (
     config_dict,
     aria2_options,
     qbit_options,
+    bot_name
 )
 
 
@@ -246,6 +247,85 @@ class DbManager:
         if self._return:
             return
         await self._db[name][BOT_ID].drop()
+
+    async def add_download_url(self, url: str, tag: str):
+        if self._return :
+            return
+        download = {
+            "_id": url,
+            "tag": tag,
+            "botname": bot_name
+        }
+        await self._db.download_links.update_one( # type: ignore
+            {"_id": url},
+            {"$set": download},
+            upsert=True
+        )
+
+    async def check_download(self, url: str):
+        if self._return :
+            return
+        exist = await self._db.download_links.find_one({"_id": url}) # type: ignore
+        return exist
+
+    async def clear_download_links(self, botName=None):
+        if self._return :
+            return
+        if not botName:
+            botName = bot_name
+        await self._db.download_links.delete_many({"botname": botName}) # type: ignore
+
+    async def remove_download(self, url: str):
+        if self._return :
+            return
+        await self._db.download_links.delete_one({"_id": url}) # type: ignore
+
+    async def update_user_tdata(self, user_id, token, time):
+        if self._return :
+            return
+        await self._db.access_token.update_one( # type: ignore
+            {"_id": user_id},
+            {"$set": {"token": token, "time": time}},
+            upsert=True
+        )
+
+    async def update_user_token(self, user_id, token, inittime):
+        if self._return :
+            return
+        await self._db.access_token.update_one( # type: ignore
+            {"_id": user_id},
+            {"$set": {"token": token, "inittime": inittime}},
+            upsert=True
+        )
+
+    async def get_token_expire_time(self, user_id):
+        if self._return :
+            return None
+        user_data = await self._db.access_token.find_one({"_id": user_id}) # type: ignore
+        if user_data:
+            return user_data.get("time")
+        return None
+
+    async def get_user_token(self, user_id):
+        if self._return :
+            return None
+        user_data = await self._db.access_token.find_one({"_id": user_id}) # type: ignore
+        if user_data:
+            return user_data.get("token")
+        return None
+
+    async def get_token_init_time(self, user_id):
+        if self._return :
+            return None
+        user_data = await self._db.access_token.find_one({"_id": user_id}) # type: ignore
+        if user_data:
+            return user_data.get("inittime")
+        return None
+
+    async def delete_all_access_tokens(self):
+        if self._return :
+            return
+        await self._db.access_token.delete_many({}) # type: ignore
 
 
 database = DbManager()

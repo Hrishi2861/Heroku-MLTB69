@@ -69,40 +69,6 @@ from .modules import (
     force_start,
 )
 
-
-@new_task
-async def stats(_, message):
-    if await aiopath.exists(".git"):
-        last_commit = await cmd_exec(
-            "git log -1 --date=short --pretty=format:'%cd <b>From</b> %cr'", True
-        )
-        last_commit = last_commit[0]
-    else:
-        last_commit = "No UPSTREAM_REPO"
-    total, used, free, disk = disk_usage("/")
-    swap = swap_memory()
-    memory = virtual_memory()
-    stats = (
-        f"<b>Commit Date:</b> {last_commit}\n\n"
-        f"<b>Bot Uptime:</b> {get_readable_time(time() - botStartTime)}\n"
-        f"<b>OS Uptime:</b> {get_readable_time(time() - boot_time())}\n\n"
-        f"<b>Total Disk Space:</b> {get_readable_file_size(total)}\n"
-        f"<b>Used:</b> {get_readable_file_size(used)} | <b>Free:</b> {get_readable_file_size(free)}\n\n"
-        f"<b>Upload:</b> {get_readable_file_size(net_io_counters().bytes_sent)}\n"
-        f"<b>Download:</b> {get_readable_file_size(net_io_counters().bytes_recv)}\n\n"
-        f"<b>CPU:</b> {cpu_percent(interval=0.5)}%\n"
-        f"<b>RAM:</b> {memory.percent}%\n"
-        f"<b>DISK:</b> {disk}%\n\n"
-        f"<b>Physical Cores:</b> {cpu_count(logical=False)}\n"
-        f"<b>Total Cores:</b> {cpu_count(logical=True)}\n\n"
-        f"<b>SWAP:</b> {get_readable_file_size(swap.total)} | <b>Used:</b> {swap.percent}%\n"
-        f"<b>Memory Total:</b> {get_readable_file_size(memory.total)}\n"
-        f"<b>Memory Free:</b> {get_readable_file_size(memory.available)}\n"
-        f"<b>Memory Used:</b> {get_readable_file_size(memory.used)}\n"
-    )
-    await send_message(message, stats)
-
-
 async def checking_access(user_id, button=None):
     if not config_dict["TOKEN_TIMEOUT"]:
         return None, button
@@ -179,7 +145,6 @@ async def start(client, message):
                     message,
                     "Invalid token.\n\nPlease generate a new one."
                 )
-            inittime = await DbManager().get_token_init_time(userid)
         if userid not in user_data:
             return await send_message(
                 message,
@@ -448,14 +413,7 @@ async def main():
             & CustomFilters.authorized,
         )
     )
-    bot.add_handler(
-        MessageHandler(
-            stats,
-            filters=command(BotCommands.StatsCommand, case_sensitive=True)
-            & CustomFilters.authorized,
-        )
-    )
-    LOGGER.info("Bot Started!")
+    LOGGER.info("🚀 Jet Bot Started!")
     signal(SIGINT, exit_clean_up)
 
 
