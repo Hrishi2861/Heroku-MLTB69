@@ -243,8 +243,6 @@ async def get_readable_message(
         user_tag = task.listener.tag.replace("@", "@").replace("_", "_")
         cancel_task = (
             f"/{BotCommands.CancelTaskCommand[1]}_{task.gid()}"
-            if not task.listener.getChat.has_protected_content
-            else f"<b>/{BotCommands.CancelTaskCommand[1]}_{task.gid()}</b>"
         )
 
         # if (
