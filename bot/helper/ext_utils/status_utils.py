@@ -188,11 +188,14 @@ async def get_readable_message(sid, is_user, page_no=1, status="All", page_step=
                 if iscoroutinefunction(task.progress)
                 else task.progress()
             )
-            msg += f"\n⌑ <b><a href='{task.listener.message.link}'>{tstatus}</a></b> » {task.speed()}"
-            msg += f"\n⌑ {get_progress_bar_string(progress)} » <b><i>{progress}</i></b>"
-            msg += f"\n⌑ <code>Done   :</code> {task.processed_bytes()} of {task.size()}"
-            msg += f"\n⌑ <code>ETA    :</code> {task.eta()}"
-            msg += f"\n⌑ <code>Engine :</code> <b><i>{task.engine}</i></b>"
+            msg += (
+                f"\n⌑ <b><a href='{task.listener.message.link}'>{tstatus}</a></b> » {task.speed()}"
+                f"\n⌑ {get_progress_bar_string(progress)} » <b><i>{progress}</i></b>"
+                f"\n⌑ <code>Done   :</code> {task.processed_bytes()} of {task.size()}"
+                f"\n⌑ <code>ETA    :</code> {task.eta()}"
+                f"\n⌑ <code>Engine :</code> <b><u>{task.engine}</u></b>"
+                f"\n⌑ <code>Upload :</code> {task.listener.mode}"
+            )
             if hasattr(task, "seeders_num"):
                 try:
                     msg += f"\n<b>Seeders:</b> {task.seeders_num()} | <b>Leechers:</b> {task.leechers_num()}"

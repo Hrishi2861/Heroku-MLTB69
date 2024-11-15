@@ -106,6 +106,7 @@ class TaskConfig:
         self.compress = False
         self.extract = False
         self.join = False
+        self.mode = ""
         self.private_link = False
         self.stop_duplicate = False
         self.sample_video = False
@@ -124,6 +125,36 @@ class TaskConfig:
         self.thumb = None
         self.extension_filter = []
         self.is_super_chat = self.message.chat.type.name in ["SUPERGROUP", "CHANNEL"]
+
+    async def set_mode(self):
+        mode = (
+            "Telegram"
+            if self.is_leech
+            else
+            "RcDrive"
+            if (
+                self.up_dest == "rc" or
+                self.up_dest == "rcl" or
+                self.up_dest == "rcu" or
+                is_rclone_path(str(self.up_dest)) == True
+            )
+            else
+            "GDrive" if (
+                self.is_clone or
+                self.up_dest == "gd" or
+                self.up_dest == "gdl" or
+                self.up_dest == "gdu" or
+                is_gdrive_id(str(self.up_dest)) == True
+            )
+            else
+            f"{self.up_dest}"
+        )
+
+        if self.compress:
+            mode += " as Zip"
+        elif self.extract:
+            mode += " as Unzip"
+        self.mode = mode
 
     def get_token_path(self, dest):
         if dest.startswith("mtp:"):
