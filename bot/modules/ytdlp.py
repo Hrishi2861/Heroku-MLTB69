@@ -410,10 +410,6 @@ class YtDlp(TaskListener):
         if "mdisk.me" in self.link:
             self.name, self.link = await _mdisk(self.link, self.name)
 
-        if await self.permission_check() != True:
-            return
-        await delete_message(self.pmsg)
-
         try:
             await self.before_start()
         except Exception as e:
