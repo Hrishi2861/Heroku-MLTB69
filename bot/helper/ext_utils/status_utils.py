@@ -16,9 +16,9 @@ from bot import (
     config_dict,
     status_dict,
 )
-from bot.helper.ext_utils.bot_utils import sync_to_async
-from bot.helper.telegram_helper.button_build import ButtonMaker
-from bot.helper.telegram_helper.bot_commands import BotCommands
+from .bot_utils import sync_to_async
+from ..telegram_helper.button_build import ButtonMaker
+from ..telegram_helper.bot_commands import BotCommands
 
 SIZE_UNITS = [
     "B",
@@ -31,8 +31,8 @@ SIZE_UNITS = [
 
 
 class MirrorStatus:
-    STATUS_UPLOADING = "Uploading"
-    STATUS_DOWNLOADING = "Downloading"
+    STATUS_UPLOADING = "Upload 📤"
+    STATUS_DOWNLOADING = "Download 📥"
     STATUS_CLONING = "Clone 🔃"
     STATUS_QUEUEDL = "QueueDL ⏳"
     STATUS_QUEUEUP = "QueueUL ⏳"
@@ -44,6 +44,7 @@ class MirrorStatus:
     STATUS_SEEDING = "Seed 🌧"
     STATUS_SAMVID = "SampleVid 🎬"
     STATUS_CONVERTING = "Convert ♻️"
+    STATUS_METADATA = "Metadata 📝"
 
 
 STATUSES = {
@@ -61,10 +62,11 @@ STATUSES = {
     "CK": MirrorStatus.STATUS_CHECKING,
     "SV": MirrorStatus.STATUS_SAMVID,
     "PA": MirrorStatus.STATUS_PAUSED,
+    "MD": MirrorStatus.STATUS_METADATA
 }
 
 
-async def getTaskByGid(gid: str):
+async def get_task_by_gid(gid: str):
     async with task_dict_lock:
         for tk in task_dict.values():
             if hasattr(
@@ -77,22 +79,22 @@ async def getTaskByGid(gid: str):
         return None
 
 
-def getSpecificTasks(status, userId):
+def get_specific_tasks(status, user_id):
     if status == "All":
-        if userId:
+        if user_id:
             return [
                 tk
                 for tk
                 in task_dict.values()
-                if tk.listener.userId == userId
+                if tk.listener.user_id == user_id
             ]
         else:
             return list(task_dict.values())
-    elif userId:
+    elif user_id:
         return [
             tk
             for tk in task_dict.values()
-            if tk.listener.userId == userId
+            if tk.listener.user_id == user_id
             and (
                 (st := tk.status())
                 and st == status
@@ -111,27 +113,25 @@ def getSpecificTasks(status, userId):
         ]
 
 
-async def getAllTasks(req_status: str, userId):
+async def get_all_tasks(req_status: str, user_id):
     async with task_dict_lock:
         return await sync_to_async(
-            getSpecificTasks,
+            get_specific_tasks,
             req_status,
-            userId
+            user_id
         )
 
 
 def get_readable_file_size(size_in_bytes):
-    if size_in_bytes is None:
+    if not size_in_bytes:
         return "0B"
+
     index = 0
     while size_in_bytes >= 1024 and index < len(SIZE_UNITS) - 1:
-        size_in_bytes /= 1024 # type: ignore
+        size_in_bytes /= 1024
         index += 1
-    return (
-        f"{size_in_bytes:.2f}{SIZE_UNITS[index]}"
-        if index > 0
-        else f"{size_in_bytes:.2f}B"
-    )
+
+    return f"{size_in_bytes:.2f}{SIZE_UNITS[index]}"
 
 
 def get_readable_time(seconds):
@@ -207,7 +207,7 @@ async def get_readable_message(
     button = None
 
     tasks = await sync_to_async(
-        getSpecificTasks,
+        get_specific_tasks,
         status,
         sid
         if is_user
