@@ -92,12 +92,6 @@ async def limit_checker(
             "Yt-Dlp"
         ),
         (
-            listener.is_playlist,
-            "PLAYLIST_LIMIT",
-            "Yt-Dlp Playlist",
-            "playlist_count"
-        ),
-        (
             listener.is_clone,
             "CLONE_LIMIT",
             "Clone"
@@ -187,10 +181,10 @@ async def limit_checker(
         if not acpt:
             limit_exceeded = f"Don't have enough free space for your task.\nYou must leave {get_readable_file_size(limit)} free storage"
 
-    if limit_exceeded:
-        if listener.is_playlist:
-            return limit_exceeded
-        return f"{limit_exceeded}.\n⚠ Your task size is {get_readable_file_size(listener.size)}"
+    #if limit_exceeded:
+       # if listener.is_playlist:
+          #  return limit_exceeded
+      #  return f"{limit_exceeded}.\n⚠ Your task size is {get_readable_file_size(listener.size)}"
 
 async def check_running_tasks(listener, state="dl"):
     all_limit = config_dict["QUEUE_ALL"]
