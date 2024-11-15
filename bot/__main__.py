@@ -222,8 +222,7 @@ async def start(client, message):
     ):
         start_string = 'Bot Started.\n' \
                        'Now I will send all of your stuffs here.\n' \
-                       'Use me at: @JetMirror \n' \
-                       'Repo: @Z_Mirror'
+                       'Use me at: @JetMirror \n'
     elif (
         not config_dict["DM_MODE"]
         and message.chat.type != message.chat.type.SUPERGROUP
@@ -231,8 +230,7 @@ async def start(client, message):
     ):
         start_string = 'Sorry, you cannot use me here!\n' \
                        'Join: @JetMirror to use me.\n' \
-                       'Thank You.\n' \
-                       'Repo: @Z_Mirror'
+                       'Thank You.\n'
     elif (
         not config_dict["DM_MODE"]
         and message.chat.type != message.chat.type.SUPERGROUP
@@ -240,8 +238,7 @@ async def start(client, message):
     ):
         start_string = 'Sorry, you cannot use me here!\n' \
                        'Join: @JetMirror to use me.\n' \
-                       'Thank You.\n' \
-                       'Repo: @Z_Mirror'
+                       'Thank You.\n'
     else:
         tag = message.from_user.mention
         start_string = "Start me in DM, not in the group.\n" \
