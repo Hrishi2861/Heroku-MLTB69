@@ -152,7 +152,7 @@ def get_progress_bar_string(pct):
 
 
 async def get_readable_message(sid, is_user, page_no=1, status="All", page_step=1):
-    msg = "<a href='https://t.me/JetMirror'>𝑩𝒐𝒕 𝒃𝒚 🚀 𝑱𝒆𝒕-𝑴𝒊𝒓𝒓𝒐𝒓</a>\n"
+    msg = "<a href='https://t.me/JetMirror'>𝑩𝒐𝒕 𝒃𝒚 🚀 𝑱𝒆𝒕-𝑴𝒊𝒓𝒓𝒐𝒓</a>\n\n"
     button = None
 
     tasks = await sync_to_async(get_specific_tasks, status, sid if is_user else None)
@@ -175,7 +175,7 @@ async def get_readable_message(sid, is_user, page_no=1, status="All", page_step=
         if task.listener.is_super_chat:
             msg += f"<b>{index + start_position}.<a href='{task.listener.message.link}'>{tstatus}</a>: </b>"
         else:
-            msg += f"<b>{index + start_position}.{tstatus}: </b>"
+            msg += f"<b>{index + start_position}.<a href='{task.listener.message.link}'>{tstatus}</a>: </b>"
         msg += (
             f"\n<blockquote>#JetMirror{index + start_position}...(Processing)</blockquote>\n"
             f"Filename: {escape(f"{task.name()}")}\n"
