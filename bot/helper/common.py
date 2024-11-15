@@ -125,6 +125,53 @@ class TaskConfig:
         self.extension_filter = []
         self.is_super_chat = self.message.chat.type.name in ["SUPERGROUP", "CHANNEL"]
 
+    async def get_id(self):
+        self.user = self.message.from_user # type: ignore
+        if not self.message.from_user: # type: ignore
+            self.user = self.message.from_user = await anno_checker( # type: ignore
+                self.message, # type: ignore
+                self.pmsg # type: ignore
+            )
+        self.user_id = self.user.id
+        self.user_dict = user_data.get(
+            self.user_id,
+            {}
+        )
+        self.chat_id = self.message.chat.id # type: ignore
+        self.get_chat = await self.client.get_chat(self.chat_id) # type: ignore
+
+
+    async def set_mode(self):
+        mode = (
+            "Telegram"
+            if self.is_leech
+            else
+            "RcDrive"
+            if (
+                self.up_dest == "rc" or
+                self.up_dest == "rcl" or
+                self.up_dest == "rcu" or
+                is_rclone_path(str(self.up_dest)) == True
+            )
+            else
+            "GDrive" if (
+                self.is_clone or
+                self.up_dest == "gd" or
+                self.up_dest == "gdl" or
+                self.up_dest == "gdu" or
+                is_gdrive_id(str(self.up_dest)) == True
+            )
+            else
+            f"{self.up_dest}"
+        )
+
+        if self.compress:
+            mode += " as Zip"
+        elif self.extract:
+            mode += " as Unzip"
+        self.mode = mode
+
+
     def get_token_path(self, dest):
         if dest.startswith("mtp:"):
             return f"tokens/{self.user_id}.pickle"
@@ -1082,3 +1129,4 @@ class TaskConfig:
                             continue
                     await move(f_path, ospath.join(dirpath, file_))
             return dl_path
+
