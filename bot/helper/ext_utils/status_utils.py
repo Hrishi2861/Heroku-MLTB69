@@ -172,12 +172,8 @@ async def get_readable_message(sid, is_user, page_no=1, status="All", page_step=
         tasks[start_position : STATUS_LIMIT + start_position], start=1
     ):
         tstatus = await sync_to_async(task.status) if status == "All" else status
-        if task.listener.is_super_chat:
-            msg += f"<b>{index + start_position}.<a href='{task.listener.message.link}'>{tstatus}</a>: </b>"
-        else:
-            msg += f"<b>{index + start_position}.<a href='{task.listener.message.link}'>{tstatus}</a>: </b>"
         msg += (
-            f"\n<blockquote>#JetMirror{index + start_position}...(Processing)</blockquote>\n"
+            f"\n<blockquote>#JetMirror{index + start_position}...<a href='{task.listener.message.link}'>{tstatus}</a></blockquote>\n"
             f"Filename: {escape(f"{task.name()}")}\n"
         )
         if tstatus not in [
