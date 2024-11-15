@@ -173,7 +173,7 @@ async def get_readable_message(sid, is_user, page_no=1, status="All", page_step=
     ):
         tstatus = await sync_to_async(task.status) if status == "All" else status
         msg += (
-            f"\n<blockquote>#JetMirror{index + start_position}...<a href='{task.listener.message.link}'>{tstatus}</a></blockquote>\n"
+            f"\n<blockquote>#JetMirror{index + start_position}...(Processing)</blockquote>\n"
             f"⌑ <b>Filename</b>: {escape(f"{task.name()}")}\n"
         )
         if tstatus not in [
@@ -188,10 +188,11 @@ async def get_readable_message(sid, is_user, page_no=1, status="All", page_step=
                 if iscoroutinefunction(task.progress)
                 else task.progress()
             )
-            msg += f"\n⌑ <b>{tstatus}</b> » {task.speed()}"
+            msg += f"\n⌑ <b><a href='{task.listener.message.link}'>{tstatus}</a></b> » {task.speed()}"
             msg += f"\n⌑ {get_progress_bar_string(progress)} » <b><i>{progress}</i></b>"
             msg += f"\n⌑ <code>Done   :</code> {task.processed_bytes()} of {task.size()}"
             msg += f"\n⌑ <code>ETA    :</code> {task.eta()}"
+            msg += f"\n⌑ <code>Engine :</code> <b><i>{task.engine}</i></b>"
             if hasattr(task, "seeders_num"):
                 try:
                     msg += f"\n<b>Seeders:</b> {task.seeders_num()} | <b>Leechers:</b> {task.leechers_num()}"
