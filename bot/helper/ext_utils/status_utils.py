@@ -234,12 +234,12 @@ async def get_readable_message(
             if status == "All"
             else status
         )
-        # elapse = time() - task.listener.time
-        # elapsed = (
-        #     "-"
-        #     if elapse < 1
-        #     else get_readable_time(elapse)
-        # )
+        elapse = time() - task.listener.time
+        elapsed = (
+            "-"
+            if elapse < 1
+            else get_readable_time(elapse)
+        )
         user_tag = task.listener.tag.replace("@", "@").replace("_", "_")
         cancel_task = (
             f"/{BotCommands.CancelTaskCommand[1]}_{task.gid()}"
@@ -278,7 +278,7 @@ async def get_readable_message(
                 f"\n⌑ {get_progress_bar_string(progress)} » <b><i>{progress}</i></b>"
                 f"\n⌑ <code>Done   :</code> {task.processed_bytes()} of {task.size()}"
                 f"\n⌑ <code>ETA    :</code> {task.eta()}"
-                # f"\n⌑ <code>Past   :</code> {elapsed}"
+                f"\n⌑ <code>Past   :</code> {elapsed}"
                 f"\n⌑ <code>Engine :</code> <b><i>{task.engine}</i></b>"
                 f"\n⌑ <code>User   :</code> <b>{user_tag}</b>"
                 f"\n⌑ <code>UserID :</code> ||{task.listener.userId}||"
@@ -313,7 +313,7 @@ async def get_readable_message(
             msg += (
                 f"\n⌑ <code>Size   :</code> {task.size()}"
                 f"\n⌑ <code>Upload :</code> {task.listener.mode}"
-                # f"\n⌑ <code>Past   :</code> {elapsed}"
+                f"\n⌑ <code>Past   :</code> {elapsed}"
                 f"\n⌑ <code>User   :</code> {user_tag}"
                 f"\n⌑ <code>Engine :</code> {task.engine}"
             )

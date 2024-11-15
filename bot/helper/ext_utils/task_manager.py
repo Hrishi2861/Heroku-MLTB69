@@ -13,6 +13,7 @@ from .bot_utils import sync_to_async, get_telegraph_list
 from .files_utils import get_base_name
 from .links_utils import is_gdrive_id
 from ..mirror_leech_utils.gdrive_utils.search import GoogleDriveSearch
+from bot.helper.ext_utils.status_utils import get_specific_tasks
 
 
 async def stop_duplicate_check(listener):
@@ -52,6 +53,13 @@ async def stop_duplicate_check(listener):
 
     return False, None
 
+async def check_user_tasks(user_id, maxtask):
+    all_tasks = await sync_to_async(
+        get_specific_tasks,
+        "All",
+        user_id
+    )
+    return len(all_tasks) >= maxtask
 
 async def check_running_tasks(listener, state="dl"):
     all_limit = config_dict["QUEUE_ALL"]
