@@ -289,9 +289,9 @@ class Mirror(TaskListener):
         if len(self.link) > 0:
             LOGGER.info(self.link)
 
-        if await self.permission_check() != True:
-            return
-        await delete_message(self.pmsg)
+        # if await self.permission_check() != True:
+        #     return
+        # await delete_message(self.pmsg)
 
         try:
             await self.before_start()
