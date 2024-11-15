@@ -369,7 +369,6 @@ async def send_bot_limits(_, query):
     TOR = "Unlimited" if config_dict["TORRENT_LIMIT"] == "" else config_dict["TORRENT_LIMIT"]
     CLL = "Unlimited" if config_dict["CLONE_LIMIT"] == "" else config_dict["CLONE_LIMIT"]
     RCL = "Unlimited" if config_dict["RCLONE_LIMIT"] == "" else config_dict["RCLONE_LIMIT"]
-    MGA = "Unlimited" if config_dict["MEGA_LIMIT"] == "" else config_dict["MEGA_LIMIT"]
     TGL = "Unlimited" if config_dict["LEECH_LIMIT"] == "" else config_dict["LEECH_LIMIT"]
     UMT = "Unlimited" if config_dict["USER_MAX_TASKS"] == "" else config_dict["USER_MAX_TASKS"]
     BMT = "Unlimited" if config_dict["QUEUE_ALL"] == "" else config_dict["QUEUE_ALL"]
@@ -385,7 +384,6 @@ async def send_bot_limits(_, query):
                 f"<code>Clone     : {CLL}</code> <b>GB</b>\n" \
                 f"<code>Rclone    : {RCL}</code> <b>GB</b>\n" \
                 f"<code>Leech     : {TGL}</code> <b>GB</b>\n" \
-                f"<code>MEGA      : {MGA}</code> <b>GB</b>\n\n" \
                 f"<code>User Tasks: {UMT}</code>\n" \
                 f"<code>Bot Tasks : {BMT}</code>" \
                 f'\n\n<a href="https://t.me/JetMirror">𝑩𝒐𝒕 𝒃𝒚 🚀 𝑱𝒆𝒕-𝑴𝒊𝒓𝒓𝒐𝒓</a>'
