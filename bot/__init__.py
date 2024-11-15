@@ -66,6 +66,7 @@ global_extension_filter = ["aria2", "!qB"]
 user_data = {}
 aria2_options = {}
 qbit_options = {}
+cached_dict = {}
 nzb_options = {}
 queued_dl = {}
 shorteneres_list = {}
