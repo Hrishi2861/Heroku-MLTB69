@@ -180,7 +180,7 @@ async def get_readable_message(sid, is_user, page_no=1, status="All", page_step=
 
         user_tag = task.listener.tag.replace("@", "@").replace("_", "_")
         cancel_task = (
-            f"/{BotCommands.CancelTaskCommand[1]}_{task.gid()}")
+            f"/{BotCommands.CancelTaskCommand[0]}_{task.gid()}")
         if tstatus not in [
             MirrorStatus.STATUS_SPLITTING,
             MirrorStatus.STATUS_SEEDING,
@@ -199,7 +199,7 @@ async def get_readable_message(sid, is_user, page_no=1, status="All", page_step=
                 f"\n⌑ <code>Done   :</code> {task.processed_bytes()} of {task.size()}"
                 f"\n⌑ <code>ETA    :</code> {task.eta()}"
                 f"\n⌑ <code>Engine :</code> <b><u>{task.engine}</u></b>"
-                f"\n⌑ <code>Upload :</code> {task.listener.mode}"
+                # f"\n⌑ <code>Upload :</code> {task.listener.mode}"
             )
             if hasattr(task, "seeders_num"):
                 try:
