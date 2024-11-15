@@ -22,7 +22,6 @@ from bencoding import (
 )
 
 from bot import (
-    KEY,
     LOGGER,
     config_dict
 )
