@@ -1274,6 +1274,18 @@ async def load_config():
     if len(NZB_LIMIT) == 0
     else float(NZB_LIMIT)
 )
+    REQUEST_LIMITS = environ.get(
+    "REQUEST_LIMITS",
+    ""
+)
+    if REQUEST_LIMITS.isdigit():
+        REQUEST_LIMITS = max(
+            int(REQUEST_LIMITS),
+            5
+        )
+    else:
+        REQUEST_LIMITS = ""
+
 
     drives_ids.clear()
     drives_names.clear()
@@ -1342,6 +1354,7 @@ async def load_config():
     "RCLONE_SERVE_USER": RCLONE_SERVE_USER,
     "RCLONE_SERVE_PASS": RCLONE_SERVE_PASS,
     "RCLONE_SERVE_PORT": RCLONE_SERVE_PORT,
+    "REQUEST_LIMITS" : REQUEST_LIMITS,
     "RSS_CHAT": RSS_CHAT,
     "RSS_DELAY": RSS_DELAY,
     "SEARCH_API_LINK": SEARCH_API_LINK,
